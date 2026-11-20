@@ -1,11 +1,10 @@
 /**
- * Windows 打包入口：支持在 npm run build:win 后透传版本递增参数。
+ * 打包入口：npm run build:mac / build:win 共用，支持透传版本递增参数。
  *
  * 用法：
- *   npm run build:win
- *   npm run build:win -- --patch
+ *   npm run build:mac
+ *   npm run build:mac -- --patch
  *   npm run build:win -- --minor
- *   npm run build:win -- --major
  *
  * 会先升级 package.json / package-lock.json 的版本，再执行 electron-vite build、
  * 启动自检和 electron-builder，产物版本号就是升级后的版本。
@@ -24,6 +23,9 @@ const rawArgs = process.argv.slice(2)
 const bumpFlags = new Set(['--patch', '--minor', '--major', '-p'])
 const bumpArg = rawArgs.find((arg) => bumpFlags.has(arg))
 const bumpType = bumpArg === '--minor' ? 'minor' : bumpArg === '--major' ? 'major' : 'patch'
+
+const target = rawArgs.includes('--mac') ? 'mac' : 'win'
+const targetLabel = target === 'mac' ? 'macOS' : 'Windows'
 
 const totalSteps = (bumpArg ? 1 : 0) + 3
 const BAR_WIDTH = 24
@@ -51,11 +53,11 @@ function runStep(label, command, args) {
     shell: false
   })
   if (result.error) {
-    console.error(`[build-win] ${label}失败：${command} ${args.join(' ')}`, result.error)
+    console.error(`[build] ${label}失败：${command} ${args.join(' ')}`, result.error)
     process.exit(1)
   }
   if (result.status !== 0) {
-    console.error(`[build-win] ${label}失败，退出码 ${result.status}`)
+    console.error(`[build] ${label}失败，退出码 ${result.status}`)
     process.exit(result.status ?? 1)
   }
   completedSteps += 1
@@ -82,11 +84,17 @@ const smoke = spawnSync(
   }
 )
 if (smoke.error || smoke.status !== 0) {
-  console.error('[build-win] 启动自检失败，已停止打包')
+  console.error('[build] 启动自检失败，已停止打包')
   process.exit(smoke.status ?? 1)
 }
 completedSteps += 1
 
-runStep('打包 Windows', npxCmd, ['electron-builder', '--win', '--x64'])
+runStep(
+  `打包 ${targetLabel}`,
+  npxCmd,
+  target === 'mac'
+    ? ['electron-builder', '--mac', '--publish', 'never']
+    : ['electron-builder', '--win', '--x64', '--publish', 'never']
+)
 
 drawFinish()

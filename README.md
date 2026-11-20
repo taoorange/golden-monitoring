@@ -17,13 +17,13 @@ npm run build:mac   # macOS dmg/zip
 npm run build:win   # Windows NSIS（建议在 Windows 或配好交叉环境）
 npm run smoke       # 启动构建后的应用做启动自检
 
-# Windows 打包前自动升版本号
-npm run build:win -- --patch   # 补丁号 +1
+# 打包前自动升版本号（mac / win 都支持）
+npm run build:mac -- --patch   # 补丁号 +1
 npm run build:win -- --minor   # 次版本 +1
 npm run build:win -- --major   # 主版本 +1
 ```
 
-`build:win` 会先构建、再做一次启动自检；自检失败会停止打包，不会继续生成安装包。
+`build:mac` / `build:win` 会先构建、再做一次启动自检；自检失败会停止打包，不会继续生成安装包。
 
 ## 后台运行
 
