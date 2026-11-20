@@ -12,6 +12,7 @@ const emit = defineEmits(['close'])
 
 const TABS = [
   { id: 'notify', label: '价格通知' },
+  { id: 'feishu', label: '飞书通知' },
   { id: 'general', label: '通用设置' }
 ]
 
@@ -22,7 +23,12 @@ const autoLaunch = ref(false)
 const autoLaunchSupported = ref(true)
 const autoLaunchBusy = ref(false)
 const autoLaunchHint = ref('')
+const showWebhook = ref(false)
+const showSecret = ref(false)
+const feishuTestState = ref('')
+const feishuTesting = ref(false)
 let testTimer = null
+let feishuTimer = null
 
 const moneyFmt = new Intl.NumberFormat('zh-CN', {
   minimumFractionDigits: 2,
@@ -153,6 +159,30 @@ async function toggleAutoLaunch() {
   }
 }
 
+async function testFeishu() {
+  if (feishuTesting.value) return
+  feishuTesting.value = true
+  feishuTestState.value = ''
+  try {
+    const res = await window.golden.testFeishu?.({
+      webhook: settings.feishuWebhook,
+      secret: settings.feishuSecret
+    })
+    if (!res) feishuTestState.value = '当前环境不支持'
+    else if (res.ok) feishuTestState.value = '发送成功，请查看飞书群'
+    else feishuTestState.value = `发送失败：${res.error || '未知错误'}`
+  } catch (err) {
+    feishuTestState.value = `发送失败：${err?.message || err}`
+  } finally {
+    feishuTesting.value = false
+    if (feishuTimer) clearTimeout(feishuTimer)
+    feishuTimer = setTimeout(() => {
+      feishuTestState.value = ''
+      feishuTimer = null
+    }, 5000)
+  }
+}
+
 function close() {
   normalizeAll()
   emit('close')
@@ -174,6 +204,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   if (testTimer) clearTimeout(testTimer)
+  if (feishuTimer) clearTimeout(feishuTimer)
 })
 </script>
 
@@ -352,6 +383,91 @@ onUnmounted(() => {
                 <p>交易时段每秒刷新；窗口隐藏或休市时自动降频。</p>
               </div>
               <span class="badge">1 秒</span>
+            </div>
+          </section>
+        </div>
+
+        <div v-else-if="activeTab === 'feishu'">
+          <section class="settings-section">
+            <h3>飞书群机器人</h3>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label>启用飞书通知</label>
+                <p>价格提醒触发时同步发到飞书群；系统通知仍会保留。</p>
+              </div>
+              <div class="setting-control">
+                <label class="switch">
+                  <input v-model="settings.feishuEnabled" type="checkbox" />
+                  <span class="switch-track" aria-hidden="true" />
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="feishu-webhook">Webhook 地址</label>
+                <p>
+                  飞书群 → 群设置 → 群机器人 → 添加自定义机器人 → 复制 Webhook 地址。
+                </p>
+              </div>
+              <div class="setting-control">
+                <div class="text-field">
+                  <input
+                    id="feishu-webhook"
+                    v-model.trim="settings.feishuWebhook"
+                    :type="showWebhook ? 'text' : 'password'"
+                    placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/…"
+                    spellcheck="false"
+                    autocomplete="off"
+                  />
+                  <button type="button" class="toggle-btn" @click="showWebhook = !showWebhook">
+                    {{ showWebhook ? '隐藏' : '显示' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="feishu-secret">签名密钥</label>
+                <p>可选。机器人安全设置里开启「签名校验」时才需要填写。</p>
+              </div>
+              <div class="setting-control">
+                <div class="text-field">
+                  <input
+                    id="feishu-secret"
+                    v-model.trim="settings.feishuSecret"
+                    :type="showSecret ? 'text' : 'password'"
+                    placeholder="未开启签名校验可留空"
+                    spellcheck="false"
+                    autocomplete="off"
+                  />
+                  <button type="button" class="toggle-btn" @click="showSecret = !showSecret">
+                    {{ showSecret ? '隐藏' : '显示' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label>连接测试</label>
+                <p>填好上面的地址后点一下，飞书群里会收到一条测试消息。</p>
+                <small v-if="feishuTestState" :class="{ error: feishuTestState.startsWith('发送失败') }">
+                  {{ feishuTestState }}
+                </small>
+              </div>
+              <div class="setting-control">
+                <button
+                  type="button"
+                  class="ghost-btn"
+                  :disabled="feishuTesting"
+                  @click="testFeishu"
+                >
+                  {{ feishuTesting ? '发送中…' : '发送测试消息' }}
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -614,6 +730,10 @@ onUnmounted(() => {
     font-size: 10px;
     line-height: 1.45;
     color: color-mix(in srgb, var(--color-text-muted) 78%, transparent);
+
+    &.error {
+      color: var(--color-danger);
+    }
   }
 }
 
@@ -653,6 +773,42 @@ onUnmounted(() => {
   }
 }
 
+.text-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 250px;
+  padding: 0 9px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-panel) 82%, white 18%);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 11px;
+  }
+
+  input[type='password'] {
+    letter-spacing: 0.06em;
+  }
+}
+
+.toggle-btn {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 10px;
+  cursor: pointer;
+}
+
 select {
   min-width: 132px;
   padding: 7px 10px;
@@ -675,6 +831,11 @@ select {
 
   &:hover {
     border-style: solid;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
   }
 }
 

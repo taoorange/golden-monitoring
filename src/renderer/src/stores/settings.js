@@ -9,7 +9,10 @@ export const SETTINGS_DEFAULTS = {
   dropStepYuan: 3,
   pollIntervalSec: 10,
   theme: 'pastel-dream',
-  showBgImage: true
+  showBgImage: true,
+  feishuEnabled: false,
+  feishuWebhook: '',
+  feishuSecret: ''
 }
 
 const THEME_IDS = new Set([
@@ -50,6 +53,9 @@ export function normalizeSettings(target = settings) {
   target.dropStepYuan = Number(clampNumber(target.dropStepYuan, 0.1, 1000, 3).toFixed(2))
   target.pollIntervalSec = Math.round(clampNumber(target.pollIntervalSec, 5, 60, 10))
   if (!THEME_IDS.has(target.theme)) target.theme = SETTINGS_DEFAULTS.theme
+  target.feishuEnabled = !!target.feishuEnabled
+  target.feishuWebhook = String(target.feishuWebhook ?? '').trim()
+  target.feishuSecret = String(target.feishuSecret ?? '').trim()
   return target
 }
 

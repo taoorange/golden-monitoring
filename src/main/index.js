@@ -7,6 +7,7 @@ import { createIcbcPoller } from './poller.js'
 import { createRealtimePoller } from './realtime-poller.js'
 import { fetchSgeDailyAu9999, fetchSgeIntradayAu9999 } from './sge-gold.js'
 import { showSystemNotification } from './notify.js'
+import { sendFeishuBotMessage } from './feishu.js'
 import { getLedgerFilePath, loadLedgerFile, saveLedgerFile } from './ledger-store.js'
 import { loadSettings, saveSettings } from './settings-store.js'
 import { processQuoteAlerts } from './alert-engine.js'
@@ -146,6 +147,13 @@ function registerIpc() {
   ipcMain.handle('golden:ledger-save', async (_e, entries) => saveLedgerFile(entries))
   ipcMain.handle('golden:autostart-get', () => readAutoLaunch())
   ipcMain.handle('golden:autostart-set', (_e, enabled) => setAutoLaunch(enabled))
+  ipcMain.handle('golden:feishu-test', (_e, payload = {}) =>
+    sendFeishuBotMessage({
+      webhook: payload.webhook,
+      secret: payload.secret,
+      text: `【攒金小本本】测试消息\n如果你在飞书看到这条消息，说明通知已配置成功。\n${new Date().toLocaleString()}`
+    })
+  )
   ipcMain.handle('golden:settings-load', async () => loadSettings())
   ipcMain.handle('golden:settings-save', async (_e, partial) => {
     const res = await saveSettings(partial || {})

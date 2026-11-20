@@ -9,7 +9,10 @@ export const SETTINGS_DEFAULTS = {
   dropStepYuan: 3,
   pollIntervalSec: 10,
   theme: 'pastel-dream',
-  showBgImage: true
+  showBgImage: true,
+  feishuEnabled: false,
+  feishuWebhook: '',
+  feishuSecret: ''
 }
 
 export const ALERT_STATE_DEFAULTS = {

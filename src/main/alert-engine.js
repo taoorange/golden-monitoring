@@ -2,12 +2,39 @@ import { BrowserWindow } from 'electron'
 import { evaluateAlert, evaluateDropAlert, weightedAvgFromEntries } from './alert-rules.js'
 import { loadLedgerFile } from './ledger-store.js'
 import { showSystemNotification } from './notify.js'
+import { sendFeishuBotMessage } from './feishu.js'
 import { loadAlertState, loadSettings, saveAlertState } from './settings-store.js'
 
 function broadcast(channel, payload) {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(channel, payload)
   }
+}
+
+const moneyFmt = new Intl.NumberFormat('zh-CN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+function holdingsLine(entries, sell) {
+  let grams = 0
+  let cost = 0
+  for (const e of entries || []) {
+    grams += Number(e.grams) || 0
+    cost += Number(e.totalPrice) || 0
+  }
+  if (!(grams > 0)) return ''
+  const avg = cost / grams
+  const pnl = grams * sell - cost
+  const sign = pnl >= 0 ? '+' : '-'
+  return `持仓 ${grams.toFixed(3)}g · 均价 ${moneyFmt.format(avg)} · 浮盈亏 ${sign}¥${moneyFmt.format(
+    Math.abs(pnl)
+  )}`
+}
+
+function buildFeishuText(message, entries, sell) {
+  const extra = holdingsLine(entries, sell)
+  return extra ? `【攒金小本本】\n${message}\n${extra}` : `【攒金小本本】\n${message}`
 }
 
 /**
@@ -60,6 +87,13 @@ export async function processQuoteAlerts(quote) {
   for (const message of messages) {
     if (settings.notifyEnabled) {
       showSystemNotification({ title: '攒金小本本', body: message })
+    }
+    if (settings.feishuEnabled && settings.feishuWebhook) {
+      void sendFeishuBotMessage({
+        webhook: settings.feishuWebhook,
+        secret: settings.feishuSecret,
+        text: buildFeishuText(message, entries, sell)
+      })
     }
     broadcast('golden:alert', { message, at: new Date().toISOString() })
   }

@@ -16,6 +16,7 @@ const goldenAPI = {
   getLedgerPath: () => ipcRenderer.invoke('golden:ledger-path'),
   getAutoLaunch: () => ipcRenderer.invoke('golden:autostart-get'),
   setAutoLaunch: (enabled) => ipcRenderer.invoke('golden:autostart-set', enabled),
+  testFeishu: (payload) => ipcRenderer.invoke('golden:feishu-test', payload),
   loadSettings: () => ipcRenderer.invoke('golden:settings-load'),
   saveSettings: (partial) => ipcRenderer.invoke('golden:settings-save', partial),
   onQuote: (handler) => {
