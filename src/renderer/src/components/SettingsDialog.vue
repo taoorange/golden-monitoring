@@ -10,8 +10,18 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
+const TABS = [
+  { id: 'notify', label: '价格通知' },
+  { id: 'general', label: '通用设置' }
+]
+
 const closeBtn = ref(null)
+const activeTab = ref('notify')
 const testState = ref('')
+const autoLaunch = ref(false)
+const autoLaunchSupported = ref(true)
+const autoLaunchBusy = ref(false)
+const autoLaunchHint = ref('')
 let testTimer = null
 
 const moneyFmt = new Intl.NumberFormat('zh-CN', {
@@ -111,6 +121,38 @@ async function testNotification() {
   }, 3000)
 }
 
+async function loadAutoLaunch() {
+  try {
+    const res = await window.golden.getAutoLaunch?.()
+    if (!res) return
+    autoLaunchSupported.value = !!res.supported
+    autoLaunch.value = !!res.enabled
+  } catch {
+    autoLaunchSupported.value = false
+  }
+}
+
+async function toggleAutoLaunch() {
+  const desired = autoLaunch.value
+  autoLaunchBusy.value = true
+  autoLaunchHint.value = ''
+  try {
+    const res = await window.golden.setAutoLaunch?.(desired)
+    if (!res || res.supported === false) {
+      autoLaunch.value = !desired
+      autoLaunchHint.value = res?.error || '当前环境不支持开机自启'
+      return
+    }
+    autoLaunch.value = !!res.enabled
+    autoLaunchHint.value = autoLaunch.value ? '已开启，下次登录系统时自动启动' : '已关闭'
+  } catch (err) {
+    autoLaunch.value = !desired
+    autoLaunchHint.value = `设置失败：${err?.message || err}`
+  } finally {
+    autoLaunchBusy.value = false
+  }
+}
+
 function close() {
   normalizeAll()
   emit('close')
@@ -126,6 +168,7 @@ function onKeydown(event) {
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   closeBtn.value?.focus()
+  loadAutoLaunch()
 })
 
 onUnmounted(() => {
@@ -158,181 +201,229 @@ onUnmounted(() => {
         </button>
       </header>
 
-      <div class="settings-body">
-        <section class="settings-section">
-          <h3>通知与提醒</h3>
+      <nav class="settings-tabs" role="tablist" aria-label="设置分类">
+        <button
+          v-for="tab in TABS"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          class="tab"
+          :class="{ active: activeTab === tab.id }"
+          :aria-selected="activeTab === tab.id"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label>系统通知</label>
-              <p>关闭后只在应用内记录提醒，不再弹系统通知。</p>
-            </div>
-            <div class="setting-control">
-              <button type="button" class="ghost-btn" @click="testNotification">
-                测试通知
-              </button>
-              <label class="switch">
-                <input v-model="settings.notifyEnabled" type="checkbox" />
-                <span class="switch-track" aria-hidden="true" />
-              </label>
-            </div>
-          </div>
-          <p v-if="testState" class="test-state">{{ testState }}</p>
+      <div class="settings-body" role="tabpanel">
+        <div v-if="activeTab === 'notify'">
+          <section class="settings-section">
+            <h3>通知与提醒</h3>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label for="near-gap">接近均价提醒</label>
-              <p>
-                赎回价进入「均价 − 阈值」到均价之间时提醒一次；跌回阈值以下，或涨到均价以上后，重新准备下一次。
-              </p>
-              <small>{{ nearExample }}</small>
-            </div>
-            <div class="setting-control">
-              <div class="number-field">
-                <input
-                  id="near-gap"
-                  v-model.number="settings.nearGapYuan"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  @change="clampNumber('nearGapYuan', 0.1, 1000, 5)"
-                />
-                <span>元/克</span>
+            <div class="setting-row">
+              <div class="setting-text">
+                <label>系统通知</label>
+                <p>关闭后只在应用内记录提醒，不再弹系统通知。</p>
+              </div>
+              <div class="setting-control">
+                <button type="button" class="ghost-btn" @click="testNotification">
+                  测试通知
+                </button>
+                <label class="switch">
+                  <input v-model="settings.notifyEnabled" type="checkbox" />
+                  <span class="switch-track" aria-hidden="true" />
+                </label>
               </div>
             </div>
-          </div>
+            <p v-if="testState" class="test-state">{{ testState }}</p>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label for="rise-step">上涨分档提醒</label>
-              <p>
-                赎回价 ≥ 均价后，每上涨 X 元/克提醒一次，只提醒新到的最高档；跌回均价 − 接近阈值以下后档位重置。
-              </p>
-              <small>{{ riseExample }}</small>
-            </div>
-            <div class="setting-control">
-              <div class="number-field">
-                <input
-                  id="rise-step"
-                  v-model.number="settings.riseStepYuan"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  @change="clampNumber('riseStepYuan', 0.1, 1000, 1)"
-                />
-                <span>元/克</span>
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="near-gap">接近均价提醒</label>
+                <p>
+                  赎回价进入「均价 − 阈值」到均价之间时提醒一次；跌回阈值以下，或涨到均价以上后，重新准备下一次。
+                </p>
+                <small>{{ nearExample }}</small>
+              </div>
+              <div class="setting-control">
+                <div class="number-field">
+                  <input
+                    id="near-gap"
+                    v-model.number="settings.nearGapYuan"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    @change="clampNumber('nearGapYuan', 0.1, 1000, 5)"
+                  />
+                  <span>元/克</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label for="drop-step">下跌分档提醒</label>
-              <p>
-                以近期高点为锚，累计下跌每 X 元/克提醒一次；价格创新高后，锚点和档位重置。
-              </p>
-              <small>{{ dropExample }}</small>
-            </div>
-            <div class="setting-control">
-              <div class="number-field">
-                <input
-                  id="drop-step"
-                  v-model.number="settings.dropStepYuan"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  @change="clampNumber('dropStepYuan', 0.1, 1000, 3)"
-                />
-                <span>元/克</span>
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="rise-step">上涨分档提醒</label>
+                <p>
+                  赎回价 ≥ 均价后，每上涨 X 元/克提醒一次，只提醒新到的最高档；跌回均价 − 接近阈值以下后档位重置。
+                </p>
+                <small>{{ riseExample }}</small>
+              </div>
+              <div class="setting-control">
+                <div class="number-field">
+                  <input
+                    id="rise-step"
+                    v-model.number="settings.riseStepYuan"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    @change="clampNumber('riseStepYuan', 0.1, 1000, 1)"
+                  />
+                  <span>元/克</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="snapshot">
-            {{ snapshotText }}
-          </div>
-
-          <div class="setting-row readonly">
-            <div class="setting-text">
-              <label>最近一次提醒</label>
-              <p>{{ lastAlertText || '暂无提醒记录' }}</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-section">
-          <h3>行情刷新</h3>
-
-          <div class="setting-row">
-            <div class="setting-text">
-              <label for="poll-interval">工行报价刷新</label>
-              <p>
-                工行如意金积存报价的刷新频率，5–60 秒；请求失败会自动退避。
-              </p>
-              <small>右侧实时金价曲线固定 1 秒刷新，不受此项影响。</small>
-            </div>
-            <div class="setting-control">
-              <div class="number-field">
-                <input
-                  id="poll-interval"
-                  v-model.number="settings.pollIntervalSec"
-                  type="number"
-                  min="5"
-                  max="60"
-                  step="1"
-                  @change="clampNumber('pollIntervalSec', 5, 60, 10)"
-                />
-                <span>秒</span>
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="drop-step">下跌分档提醒</label>
+                <p>
+                  以近期高点为锚，累计下跌每 X 元/克提醒一次；价格创新高后，锚点和档位重置。
+                </p>
+                <small>{{ dropExample }}</small>
+              </div>
+              <div class="setting-control">
+                <div class="number-field">
+                  <input
+                    id="drop-step"
+                    v-model.number="settings.dropStepYuan"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    @change="clampNumber('dropStepYuan', 0.1, 1000, 3)"
+                  />
+                  <span>元/克</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="setting-row readonly">
-            <div class="setting-text">
-              <label>实时金价曲线</label>
-              <p>交易时段每秒刷新；窗口隐藏或休市时自动降频。</p>
+            <div class="snapshot">
+              {{ snapshotText }}
             </div>
-            <span class="badge">1 秒</span>
-          </div>
-        </section>
 
-        <section class="settings-section">
-          <h3>外观</h3>
+            <div class="setting-row readonly">
+              <div class="setting-text">
+                <label>最近一次提醒</label>
+                <p>{{ lastAlertText || '暂无提醒记录' }}</p>
+              </div>
+            </div>
+          </section>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label for="theme">主题</label>
-              <p>只影响界面配色，不影响提醒和行情。</p>
-            </div>
-            <div class="setting-control">
-              <select id="theme" v-model="settings.theme">
-                <optgroup label="浅色">
-                  <option value="pastel-dream">粉紫梦核</option>
-                  <option value="mist-blue">晨雾蓝</option>
-                  <option value="warm-sand">暖砂金</option>
-                  <option value="celadon">青瓷</option>
-                  <option value="business-slate">商务石墨</option>
-                </optgroup>
-                <optgroup label="深色">
-                  <option value="night-neon">夜街霓虹</option>
-                </optgroup>
-              </select>
-            </div>
-          </div>
+          <section class="settings-section">
+            <h3>行情刷新</h3>
 
-          <div class="setting-row">
-            <div class="setting-text">
-              <label>显示背景图</label>
-              <p>只影响外观；关闭后使用纯色渐变背景。</p>
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="poll-interval">工行报价刷新</label>
+                <p>
+                  工行如意金积存报价的刷新频率，5–60 秒；请求失败会自动退避。
+                </p>
+                <small>右侧实时金价曲线固定 1 秒刷新，不受此项影响。</small>
+              </div>
+              <div class="setting-control">
+                <div class="number-field">
+                  <input
+                    id="poll-interval"
+                    v-model.number="settings.pollIntervalSec"
+                    type="number"
+                    min="5"
+                    max="60"
+                    step="1"
+                    @change="clampNumber('pollIntervalSec', 5, 60, 10)"
+                  />
+                  <span>秒</span>
+                </div>
+              </div>
             </div>
-            <div class="setting-control">
-              <label class="switch">
-                <input v-model="settings.showBgImage" type="checkbox" />
-                <span class="switch-track" aria-hidden="true" />
-              </label>
+
+            <div class="setting-row readonly">
+              <div class="setting-text">
+                <label>实时金价曲线</label>
+                <p>交易时段每秒刷新；窗口隐藏或休市时自动降频。</p>
+              </div>
+              <span class="badge">1 秒</span>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
+
+        <div v-else>
+          <section class="settings-section">
+            <h3>启动</h3>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label>开机自启</label>
+                <p>
+                  登录系统后自动启动应用，常驻托盘继续监控价格；双击托盘图标即可打开主界面。
+                </p>
+                <small v-if="!autoLaunchSupported">开发模式不生效，安装版可用。</small>
+                <small v-else-if="autoLaunchHint">{{ autoLaunchHint }}</small>
+              </div>
+              <div class="setting-control">
+                <label
+                  class="switch"
+                  :class="{ disabled: !autoLaunchSupported || autoLaunchBusy }"
+                >
+                  <input
+                    v-model="autoLaunch"
+                    type="checkbox"
+                    :disabled="!autoLaunchSupported || autoLaunchBusy"
+                    @change="toggleAutoLaunch"
+                  />
+                  <span class="switch-track" aria-hidden="true" />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h3>外观</h3>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label for="theme">主题</label>
+                <p>只影响界面配色，不影响提醒和行情。</p>
+              </div>
+              <div class="setting-control">
+                <select id="theme" v-model="settings.theme">
+                  <optgroup label="浅色">
+                    <option value="pastel-dream">粉紫梦核</option>
+                    <option value="mist-blue">晨雾蓝</option>
+                    <option value="warm-sand">暖砂金</option>
+                    <option value="celadon">青瓷</option>
+                    <option value="business-slate">商务石墨</option>
+                  </optgroup>
+                  <optgroup label="深色">
+                    <option value="night-neon">夜街霓虹</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-text">
+                <label>显示背景图</label>
+                <p>只影响外观；关闭后使用纯色渐变背景。</p>
+              </div>
+              <div class="setting-control">
+                <label class="switch">
+                  <input v-model="settings.showBgImage" type="checkbox" />
+                  <span class="switch-track" aria-hidden="true" />
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
 
       <footer class="settings-foot">
@@ -375,7 +466,7 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 22px 12px;
+  padding: 18px 22px 10px;
 
   h2 {
     margin: 0;
@@ -388,6 +479,40 @@ onUnmounted(() => {
     margin: 3px 0 0;
     font-size: 0.75rem;
     color: var(--color-text-muted);
+  }
+}
+
+.settings-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 0 22px 10px;
+
+  .tab {
+    padding: 6px 14px;
+    border: 1px solid var(--color-card-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+    &:hover {
+      color: var(--color-accent);
+    }
+
+    &.active {
+      border-color: transparent;
+      background: var(--color-accent-soft);
+      color: #fff;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent-soft);
+      outline-offset: 2px;
+    }
   }
 }
 
@@ -612,6 +737,15 @@ select {
   input:focus-visible + .switch-track {
     outline: 2px solid color-mix(in srgb, var(--color-accent-soft) 65%, transparent);
     outline-offset: 2px;
+  }
+
+  &.disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+
+    input {
+      cursor: not-allowed;
+    }
   }
 }
 

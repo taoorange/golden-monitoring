@@ -59,6 +59,25 @@ function openSettings() {
   mainWindow.webContents.send('golden:open-settings')
 }
 
+/** 开机自启：只有安装版（app.isPackaged）才写入系统登录项，避免开发模式注册 Electron 本体 */
+function readAutoLaunch() {
+  if (!app.isPackaged) return { supported: false, enabled: false }
+  return { supported: true, enabled: !!app.getLoginItemSettings().openAtLogin }
+}
+
+function setAutoLaunch(enabled) {
+  if (!app.isPackaged) {
+    return { supported: false, enabled: false, error: '开发模式不生效，安装版可用' }
+  }
+  const options = { openAtLogin: !!enabled }
+  if (process.platform === 'win32') {
+    options.path = process.execPath
+    options.args = []
+  }
+  app.setLoginItemSettings(options)
+  return { ...readAutoLaunch(), ok: true }
+}
+
 function quitApp() {
   isQuitting = true
   poller.stop()
@@ -125,6 +144,8 @@ function registerIpc() {
   ipcMain.handle('golden:ledger-path', () => getLedgerFilePath())
   ipcMain.handle('golden:ledger-load', async () => loadLedgerFile())
   ipcMain.handle('golden:ledger-save', async (_e, entries) => saveLedgerFile(entries))
+  ipcMain.handle('golden:autostart-get', () => readAutoLaunch())
+  ipcMain.handle('golden:autostart-set', (_e, enabled) => setAutoLaunch(enabled))
   ipcMain.handle('golden:settings-load', async () => loadSettings())
   ipcMain.handle('golden:settings-save', async (_e, partial) => {
     const res = await saveSettings(partial || {})
