@@ -1,0 +1,23 @@
+// 预留第二套：夜街霓虹（最小可用）
+[data-theme='night-neon'] {
+  --color-bg-start: #312e81;
+  --color-bg-mid: #0f172a;
+  --color-bg-end: #020617;
+  --color-text: #e2e8f0;
+  --color-text-muted: #67e8f9;
+  --color-accent: #22d3ee;
+  --color-accent-soft: #67e8f9;
+  --color-cyan: #67e8f9;
+  --color-cyan-soft: #22d3ee;
+  --color-pink-soft: #f472b6;
+  --color-panel: rgba(15, 23, 42, 0.72);
+  --color-panel-border: rgba(103, 232, 249, 0.35);
+  --color-card-border: rgba(103, 232, 249, 0.45);
+  --color-sell: #fda4af;
+  --color-danger: #fb7185;
+  --color-overlay: rgba(2, 6, 23, 0.62);
+  --shadow-panel: 0 0 28px rgba(244, 114, 182, 0.18);
+  --chart-line: #f472b6;
+  --chart-fill: rgba(34, 211, 238, 0.28);
+  --chart-grid: rgba(34, 211, 238, 0.14);
+}

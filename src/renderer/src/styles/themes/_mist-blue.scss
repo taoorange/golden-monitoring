@@ -1,0 +1,23 @@
+// 晨雾蓝 — 清爽的蓝灰渐变，适合白天办公环境
+[data-theme='mist-blue'] {
+  --color-bg-start: #e0f2fe;
+  --color-bg-mid: #f0f9ff;
+  --color-bg-end: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-accent: #075985;
+  --color-accent-soft: #0284c7;
+  --color-cyan: #0e7490;
+  --color-cyan-soft: #a5f3fc;
+  --color-pink-soft: #bae6fd;
+  --color-panel: rgba(255, 255, 255, 0.7);
+  --color-panel-border: rgba(255, 255, 255, 0.94);
+  --color-card-border: #bae6fd;
+  --color-sell: #0f766e;
+  --color-danger: #b91c1c;
+  --color-overlay: rgba(15, 23, 42, 0.32);
+  --shadow-panel: 0 10px 30px rgba(3, 105, 161, 0.12);
+  --chart-line: #0284c7;
+  --chart-fill: rgba(56, 189, 248, 0.24);
+  --chart-grid: rgba(3, 105, 161, 0.12);
+}

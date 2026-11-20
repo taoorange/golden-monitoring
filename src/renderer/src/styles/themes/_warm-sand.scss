@@ -1,0 +1,23 @@
+// 暖砂金 — 米砂底色配琥珀强调色，和黄金主题呼应
+[data-theme='warm-sand'] {
+  --color-bg-start: #fef3c7;
+  --color-bg-mid: #fffbeb;
+  --color-bg-end: #e7e5e4;
+  --color-text: #292524;
+  --color-text-muted: #78716c;
+  --color-accent: #92400e;
+  --color-accent-soft: #b45309;
+  --color-cyan: #0f766e;
+  --color-cyan-soft: #99f6e4;
+  --color-pink-soft: #fcd34d;
+  --color-panel: rgba(255, 255, 255, 0.66);
+  --color-panel-border: rgba(255, 255, 255, 0.92);
+  --color-card-border: #fcd34d;
+  --color-sell: #0f766e;
+  --color-danger: #b91c1c;
+  --color-overlay: rgba(41, 37, 36, 0.3);
+  --shadow-panel: 0 10px 30px rgba(180, 83, 9, 0.12);
+  --chart-line: #d97706;
+  --chart-fill: rgba(245, 158, 11, 0.22);
+  --chart-grid: rgba(180, 83, 9, 0.12);
+}

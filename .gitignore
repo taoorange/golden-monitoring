@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+dist_electron/
+release/
+.DS_Store
+*.log
+.env
+.env.*
+.superpowers/
+.idea/
+.vscode/

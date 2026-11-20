@@ -1,0 +1,23 @@
+// C1 粉紫梦核 — 通过 CSS 变量输出，便于 data-theme 切换
+[data-theme='pastel-dream'] {
+  --color-bg-start: #fce7f3;
+  --color-bg-mid: #e0e7ff;
+  --color-bg-end: #cffafe;
+  --color-text: #312e81;
+  --color-text-muted: #6366f1;
+  --color-accent: #7c3aed;
+  --color-accent-soft: #a78bfa;
+  --color-cyan: #0891b2;
+  --color-cyan-soft: #67e8f9;
+  --color-pink-soft: #f9a8d4;
+  --color-panel: rgba(255, 255, 255, 0.62);
+  --color-panel-border: rgba(255, 255, 255, 0.92);
+  --color-card-border: #c4b5fd;
+  --color-sell: #0d9488;
+  --color-danger: #be185d;
+  --color-overlay: rgba(49, 46, 129, 0.3);
+  --shadow-panel: 0 10px 30px rgba(99, 102, 241, 0.12);
+  --chart-line: #7c3aed;
+  --chart-fill: rgba(167, 139, 250, 0.35);
+  --chart-grid: rgba(124, 58, 237, 0.12);
+}

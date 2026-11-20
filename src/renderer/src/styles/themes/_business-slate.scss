@@ -1,0 +1,23 @@
+// 商务石墨 — 中性灰蓝底色 + 蓝色强调，偏正式的桌面办公风格
+[data-theme='business-slate'] {
+  --color-bg-start: #f8fafc;
+  --color-bg-mid: #f1f5f9;
+  --color-bg-end: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-accent: #1e3a8a;
+  --color-accent-soft: #2563eb;
+  --color-cyan: #0e7490;
+  --color-cyan-soft: #bae6fd;
+  --color-pink-soft: #cbd5e1;
+  --color-panel: rgba(255, 255, 255, 0.84);
+  --color-panel-border: rgba(255, 255, 255, 0.96);
+  --color-card-border: #cbd5e1;
+  --color-sell: #0f766e;
+  --color-danger: #b91c1c;
+  --color-overlay: rgba(15, 23, 42, 0.34);
+  --shadow-panel: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --chart-line: #1d4ed8;
+  --chart-fill: rgba(59, 130, 246, 0.16);
+  --chart-grid: rgba(15, 23, 42, 0.08);
+}
