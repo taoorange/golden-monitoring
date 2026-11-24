@@ -1,6 +1,6 @@
 {
   "name": "golden-monitoring",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "攒金小本本 - 工行如意金监测与账本",
   "main": "./out/main/index.js",
   "author": "taotao",

@@ -22,7 +22,21 @@ let resizeObserver = null
 let snapshotSynced = false
 
 const RANGE_DAYS = { '1M': 31, '3M': 93, '1Y': 366 }
-const REALTIME_MAX = 1800
+// 保留 2 小时数据，默认只展示最近 1 小时，可左右拖动回看
+const REALTIME_MAX = 7200
+const REALTIME_WINDOW_MS = 60 * 60 * 1000
+
+/** 是否跟随最新价格自动滚动；用户拖走后暂停，回到最右侧再恢复 */
+let followRealtime = true
+/** 用户手动拖动后的固定时间窗口（毫秒），窗口大小始终为 1 小时 */
+let userWindow = null
+let lastMode = ''
+
+function formatClock(ts) {
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 const filteredDaily = computed(() => {
   const rows = dailyRows.value
@@ -98,22 +112,67 @@ function renderChart() {
     const preClose = Number(preCloseRaw)
     const hasPreClose =
       preCloseRaw != null && Number.isFinite(preClose) && preClose > 0
+
+    const lastAt = points.length
+      ? new Date(points[points.length - 1].at).getTime()
+      : Date.now()
+
+    // 窗口固定 1 小时：跟随最新价，或停在用户拖到的位置
+    let start = lastAt - REALTIME_WINDOW_MS
+    let end = lastAt
+    if (!followRealtime && userWindow) {
+      start = userWindow.start
+      end = userWindow.end
+    }
+
+    const zoom = [
+      {
+        type: 'inside',
+        xAxisIndex: 0,
+        // 锁定窗口大小：拖动/滚轮只平移，不缩放
+        zoomLock: true,
+        zoomOnMouseWheel: false,
+        moveOnMouseWheel: true,
+        moveOnMouseMove: true,
+        startValue: start,
+        endValue: end
+      },
+      {
+        type: 'slider',
+        xAxisIndex: 0,
+        zoomLock: true,
+        brushSelect: false,
+        height: 12,
+        bottom: 4,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(148, 163, 184, 0.12)',
+        fillerColor: fill,
+        handleStyle: { color: line },
+        moveHandleSize: 0,
+        showDetail: false,
+        textStyle: { color: text, fontSize: 9 },
+        startValue: start,
+        endValue: end
+      }
+    ]
+
     chart.setOption(
       {
         ...baseOption,
+        grid: { ...baseOption.grid, bottom: 44 },
         animation: false,
         tooltip: {
           trigger: 'axis',
           valueFormatter: (v) => `${Number(v).toFixed(2)} 元/克`
         },
+        dataZoom: zoom,
         xAxis: {
-          type: 'category',
-          boundaryGap: false,
-          data: points.map((p) => p.t),
+          type: 'time',
           axisLabel: {
             color: text,
             fontSize: 10,
-            interval: Math.max(0, Math.ceil(points.length / 6) - 1)
+            hideOverlap: true,
+            formatter: (value) => formatClock(value)
           }
         },
         yAxis: {
@@ -124,7 +183,7 @@ function renderChart() {
         series: [
           {
             type: 'line',
-            data: points.map((p) => p.price),
+            data: points.map((p) => [new Date(p.at).getTime(), p.price]),
             smooth: true,
             showSymbol: false,
             lineStyle: { color: line, width: 1.8 },
@@ -141,8 +200,10 @@ function renderChart() {
           }
         ]
       },
-      true
+      // 首次进入实时模式重建；后续合并，避免每秒刷新把用户拖动的窗口重置
+      lastMode !== 'realtime'
     )
+    lastMode = 'realtime'
     return
   }
 
@@ -169,6 +230,7 @@ function renderChart() {
       },
       true
     )
+    lastMode = 'intraday'
     return
   }
 
@@ -194,6 +256,7 @@ function renderChart() {
     },
     true
   )
+  lastMode = 'daily'
 }
 
 async function loadDaily() {
@@ -277,13 +340,39 @@ async function switchMode(next) {
     else renderChart()
   } else if (next === 'realtime') {
     error.value = ''
+    followRealtime = true
     if (!realtimePoints.value.length) await loadRealtime()
     else renderChart()
   }
 }
 
+/** 用户把窗口拖离最右侧就暂停自动跟随并记住位置；拖回最右侧恢复 */
+function onDataZoom() {
+  const dz = chart?.getOption()?.dataZoom?.[0]
+  if (!dz) return
+  const endPct = typeof dz.end === 'number' ? dz.end : 100
+  followRealtime = endPct >= 99.5
+  if (followRealtime) {
+    userWindow = null
+    return
+  }
+
+  const points = realtimePoints.value
+  if (!points.length) return
+  const times = points.map((p) => new Date(p.at).getTime())
+  const min = times[0]
+  const max = times[times.length - 1]
+  if (!(max > min)) return
+
+  const startPct = typeof dz.start === 'number' ? dz.start : 0
+  const start = min + ((max - min) * startPct) / 100
+  // 窗口宽度始终保持 1 小时，不随数据增长变宽
+  userWindow = { start, end: start + REALTIME_WINDOW_MS }
+}
+
 onMounted(async () => {
   chart = echarts.init(chartEl.value)
+  chart.on('dataZoom', onDataZoom)
   resizeObserver = new ResizeObserver(() => chart?.resize())
   resizeObserver.observe(chartEl.value)
   await loadRealtime()

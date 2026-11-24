@@ -18,8 +18,10 @@ const ACTIVE_INTERVAL_MS = 1_000
 const HIDDEN_INTERVAL_MS = 5_000
 const IDLE_INTERVAL_MS = 15_000
 const MAX_BACKOFF_MS = 30_000
-const MAX_POINTS = 1_800
-const SEED_POINTS = 30
+// 渲染层按最近 1 小时展示，这里多留一些便于左右回看
+const MAX_POINTS = 7_200
+// 种子多取一段分钟线，保证打开应用就能左右回看，而不是只有最近半小时
+const SEED_POINTS = 180
 const FRESH_MS = 5 * 60 * 1_000
 
 const TIME_FMT = new Intl.DateTimeFormat('en-GB', {

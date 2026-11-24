@@ -6,6 +6,7 @@ import SettingsDialog from './components/SettingsDialog.vue'
 import { flushLedgerSave, initLedger, ledger } from './stores/ledger.js'
 import { initSettings, settings } from './stores/settings.js'
 import bgCute from '../../assets/imgs/cute.jpg'
+import { version as appVersion } from '../../../package.json'
 
 const quote = ref(null)
 const quoteError = ref('')
@@ -253,10 +254,26 @@ onUnmounted(() => {
       :last-alert-text="lastAlertText"
       @close="closeSettings"
     />
+
+    <span class="app-version" aria-hidden="true">v{{ appVersion }}</span>
   </div>
 </template>
 
 <style scoped lang="scss">
+.app-version {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  z-index: 5;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+
 .ledger-panel {
   display: flex;
   flex-direction: column;
