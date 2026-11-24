@@ -572,12 +572,13 @@ onUnmounted(() => {
     font-variant-numeric: tabular-nums;
   }
 
+  // 国内习惯：盈利红、亏损绿
   &.up {
-    color: var(--color-sell);
+    color: var(--color-up);
   }
 
   &.down {
-    color: var(--color-danger);
+    color: var(--color-down);
   }
 
   &.flat {

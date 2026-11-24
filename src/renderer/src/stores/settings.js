@@ -6,9 +6,9 @@ export const SETTINGS_DEFAULTS = {
   notifyEnabled: true,
   nearGapYuan: 5,
   riseStepYuan: 1,
-  dropStepYuan: 3,
+  changeStepYuan: 1,
   pollIntervalSec: 10,
-  theme: 'pastel-dream',
+  theme: 'battle-red',
   showBgImage: true,
   feishuEnabled: false,
   feishuWebhook: '',
@@ -16,6 +16,7 @@ export const SETTINGS_DEFAULTS = {
 }
 
 const THEME_IDS = new Set([
+  'battle-red',
   'pastel-dream',
   'night-neon',
   'mist-blue',
@@ -50,7 +51,8 @@ function clampNumber(value, min, max, fallback) {
 export function normalizeSettings(target = settings) {
   target.nearGapYuan = Number(clampNumber(target.nearGapYuan, 0.1, 1000, 5).toFixed(2))
   target.riseStepYuan = Number(clampNumber(target.riseStepYuan, 0.1, 1000, 1).toFixed(2))
-  target.dropStepYuan = Number(clampNumber(target.dropStepYuan, 0.1, 1000, 3).toFixed(2))
+  target.changeStepYuan = Number(clampNumber(target.changeStepYuan, 0.1, 1000, 1).toFixed(2))
+  delete target.dropStepYuan
   target.pollIntervalSec = Math.round(clampNumber(target.pollIntervalSec, 5, 60, 10))
   if (!THEME_IDS.has(target.theme)) target.theme = SETTINGS_DEFAULTS.theme
   target.feishuEnabled = !!target.feishuEnabled

@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createIcbcPoller } from './poller.js'
 import { createRealtimePoller } from './realtime-poller.js'
 import { fetchSgeDailyAu9999, fetchSgeIntradayAu9999 } from './sge-gold.js'
@@ -124,7 +124,8 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  // electron-vite dev 会注入 ELECTRON_RENDERER_URL；打包后为空，直接读本地文件
+  if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))

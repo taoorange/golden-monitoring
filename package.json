@@ -1,12 +1,12 @@
 {
   "name": "golden-monitoring",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "攒金小本本 - 工行如意金监测与账本",
   "main": "./out/main/index.js",
   "author": "taotao",
   "homepage": "",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/dev.js",
     "start": "electron-vite preview",
     "build": "electron-vite build",
     "build:mac": "node scripts/build.js --mac",

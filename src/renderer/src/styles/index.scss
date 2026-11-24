@@ -1,10 +1,17 @@
 @use './tokens' as *;
 @use './themes/pastel-dream';
+@use './themes/battle-red';
 @use './themes/night-neon';
 @use './themes/mist-blue';
 @use './themes/warm-sand';
 @use './themes/celadon';
 @use './themes/business-slate';
+
+:root {
+  // 国内行情习惯：上涨红；下跌用中性灰，避免「绿色」的负面暗示
+  --color-up: #dc2626;
+  --color-down: #6b7280;
+}
 
 *,
 *::before,
@@ -187,7 +194,8 @@ body {
   .label {
     display: block;
     font-size: 0.75rem;
-    color: var(--color-accent);
+    // 两张卡的标签统一用主题文字色再压深一点，不区分红绿
+    color: color-mix(in srgb, var(--color-text) 80%, var(--color-accent) 20%);
     margin-bottom: 4px;
   }
 
@@ -198,12 +206,17 @@ body {
   &.sell {
     border-color: var(--color-cyan-soft);
 
-    .label {
-      color: var(--color-cyan);
-    }
-
     strong {
       color: var(--color-sell);
     }
+  }
+
+  // 涨跌配色放在 .sell 之后，保证赎回价也能被覆盖
+  &.up strong {
+    color: var(--color-up);
+  }
+
+  &.down strong {
+    color: var(--color-down);
   }
 }

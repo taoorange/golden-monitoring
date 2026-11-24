@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { evaluateAlert, evaluateDropAlert, weightedAvgFromEntries } from './alert-rules.js'
+import { evaluateAlert, evaluateChangeAlert, weightedAvgFromEntries } from './alert-rules.js'
 import { loadLedgerFile } from './ledger-store.js'
 import { showSystemNotification } from './notify.js'
 import { sendFeishuBotMessage } from './feishu.js'
@@ -63,26 +63,21 @@ export async function processQuoteAlerts(quote) {
     }
   })
 
-  const dropResult = evaluateDropAlert({
+  const changeResult = evaluateChangeAlert({
     sell,
-    dropStepYuan: Number(settings.dropStepYuan),
-    state: {
-      dropAnchorSell: state.dropAnchorSell,
-      maxDropTier: state.maxDropTier
-    }
+    changeStepYuan: Number(settings.changeStepYuan),
+    state: { changeBaseSell: state.changeBaseSell }
   })
 
   const nextState = {
-    ...state,
     nearArmed: ledgerResult.nextState.nearArmed,
     maxRiseTier: ledgerResult.nextState.maxRiseTier,
-    dropAnchorSell: dropResult.nextState.dropAnchorSell,
-    maxDropTier: dropResult.nextState.maxDropTier
+    changeBaseSell: changeResult.nextState.changeBaseSell
   }
   await saveAlertState(nextState)
 
   if (ledgerResult.shouldNotify) messages.push(ledgerResult.message)
-  for (const n of dropResult.notifications) messages.push(n.message)
+  for (const n of changeResult.notifications) messages.push(n.message)
 
   for (const message of messages) {
     if (settings.notifyEnabled) {

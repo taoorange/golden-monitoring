@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ChartPanel from './components/ChartPanel.vue'
 import LedgerPanel from './components/LedgerPanel.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
-import { initLedger, ledger } from './stores/ledger.js'
+import { flushLedgerSave, initLedger, ledger } from './stores/ledger.js'
 import { initSettings, settings } from './stores/settings.js'
 import bgCute from '../../assets/imgs/cute.jpg'
 
@@ -14,10 +14,16 @@ const lastAlertText = ref('')
 const showSettings = ref(false)
 const settingsBtn = ref(null)
 const refreshing = ref(false)
+/**
+ * 积存价 / 赎回价共用的涨跌方向：跟随国内金价（上金所 Au99.99）当日涨跌，
+ * up 固定红、down 固定绿，不随主题配色变化
+ */
+const priceTone = ref('flat')
 
 let offQuote = null
 let offAlert = null
 let offOpenSettings = null
+let offRealtime = null
 
 const buyText = computed(() =>
   quote.value?.buyYuan != null ? quote.value.buyYuan.toFixed(2) : '—'
@@ -36,10 +42,30 @@ const statusText = computed(() => {
   return '行情正常'
 })
 
+/** 从实时金价（Au99.99 / 黄金 T+D）推导当日涨跌方向 */
+function toneFromRealtime(rtQuote) {
+  if (!rtQuote) return 'flat'
+  const pct = Number(rtQuote.changePct)
+  if (Number.isFinite(pct)) return pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat'
+  const price = Number(rtQuote.price)
+  const prevClose = Number(rtQuote.prevClose)
+  if (!Number.isFinite(price) || !Number.isFinite(prevClose) || prevClose <= 0) {
+    return 'flat'
+  }
+  if (price > prevClose) return 'up'
+  if (price < prevClose) return 'down'
+  return 'flat'
+}
+
+/** 统一入口：更新工行报价 */
+function applyQuote(next) {
+  if (!next) return
+  quote.value = { ...next }
+}
+
 function onQuotePayload(payload) {
   if (payload?.quote) {
-    // 换新对象，确保时间戳变化时界面一定更新
-    quote.value = { ...payload.quote }
+    applyQuote(payload.quote)
     quoteStale.value = !payload.ok
   }
   if (payload?.ok) {
@@ -60,7 +86,7 @@ async function refreshNow() {
   try {
     const result = await window.golden.refreshQuote()
     if (result?.quote) {
-      quote.value = { ...result.quote }
+      applyQuote(result.quote)
       quoteStale.value = !result.ok
     }
     if (result && result.ok === false) {
@@ -98,6 +124,10 @@ function onKeydown(event) {
   }
 }
 
+function onPageHide() {
+  flushLedgerSave()
+}
+
 onMounted(async () => {
   await initSettings()
   await initLedger()
@@ -108,8 +138,16 @@ onMounted(async () => {
   })
   offOpenSettings = window.golden.onOpenSettings?.(openSettings) || null
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('pagehide', onPageHide)
+
+  const realtime = await window.golden.getRealtime().catch(() => null)
+  if (realtime?.quote) priceTone.value = toneFromRealtime(realtime.quote)
+  offRealtime = window.golden.onRealtime?.((payload) => {
+    if (payload?.quote) priceTone.value = toneFromRealtime(payload.quote)
+  }) || null
+
   const last = await window.golden.getLastQuote()
-  if (last) quote.value = last
+  if (last) applyQuote(last)
   window.golden.setPollInterval(Number(settings.pollIntervalSec))
 })
 
@@ -117,7 +155,10 @@ onUnmounted(() => {
   offQuote?.()
   offAlert?.()
   offOpenSettings?.()
+  offRealtime?.()
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('pagehide', onPageHide)
+  flushLedgerSave()
 })
 </script>
 
@@ -175,13 +216,23 @@ onUnmounted(() => {
     </header>
 
     <div class="quote-row top-quote">
-      <div class="quote-card">
+      <div class="quote-card" :class="priceTone">
         <span class="label">积存价 ♡</span>
-        <strong>{{ buyText }}</strong>
+        <strong>
+          {{ buyText }}
+          <span v-if="priceTone !== 'flat'" class="trend-arrow" :class="priceTone">
+            {{ priceTone === 'up' ? '↑' : '↓' }}
+          </span>
+        </strong>
       </div>
-      <div class="quote-card sell">
+      <div class="quote-card sell" :class="priceTone">
         <span class="label">赎回价 ★</span>
-        <strong>{{ sellText }}</strong>
+        <strong>
+          {{ sellText }}
+          <span v-if="priceTone !== 'flat'" class="trend-arrow" :class="priceTone">
+            {{ priceTone === 'up' ? '↑' : '↓' }}
+          </span>
+        </strong>
       </div>
     </div>
 
@@ -270,5 +321,58 @@ onUnmounted(() => {
 
 .top-quote {
   margin-bottom: 12px;
+}
+
+// 价格后的涨跌箭头：上涨红色向上浮动，下跌绿色向下浮动
+.trend-arrow {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.72em;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: 0.08em;
+  will-change: transform;
+
+  &.up {
+    color: #dc2626;
+    animation: arrow-up 1.1s ease-in-out infinite;
+  }
+
+  &.down {
+    color: #16a34a;
+    animation: arrow-down 1.1s ease-in-out infinite;
+  }
+}
+
+@keyframes arrow-up {
+  0%,
+  100% {
+    transform: translateY(2px);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@keyframes arrow-down {
+  0%,
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translateY(5px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-arrow {
+    animation: none;
+  }
 }
 </style>

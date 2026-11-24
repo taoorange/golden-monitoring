@@ -22,17 +22,40 @@ function readLegacyLocalStorage() {
   }
 }
 
+/**
+ * IPC / Structured Clone 不能传 Vue Proxy；转成纯 JSON 再落盘。
+ * @returns {any[]}
+ */
+function entriesForSave() {
+  return JSON.parse(JSON.stringify(ledger.entries))
+}
+
+async function writeLedgerNow() {
+  if (!persistEnabled || !window.golden?.saveLedger) return
+  try {
+    const res = await window.golden.saveLedger(entriesForSave())
+    if (res?.path) ledger.filePath = res.path
+  } catch (err) {
+    console.error('保存账本失败', err)
+  }
+}
+
 function scheduleSave() {
   if (!persistEnabled || !window.golden?.saveLedger) return
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    try {
-      const res = await window.golden.saveLedger(ledger.entries)
-      if (res?.path) ledger.filePath = res.path
-    } catch (err) {
-      console.error('保存账本失败', err)
-    }
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    writeLedgerNow()
   }, 200)
+}
+
+/** 取消 debounce，立刻写盘（退出前调用，避免 200ms 窗口丢保存） */
+export async function flushLedgerSave() {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  await writeLedgerNow()
 }
 
 /** 首次无账本时的默认攒金（可改可删） */

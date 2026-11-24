@@ -1,13 +1,17 @@
 import { Tray, Menu, nativeImage } from 'electron'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
-import { is } from '@electron-toolkit/utils'
 
 /** @type {Tray | null} */
 let tray = null
 
+/** 开发模式：electron-vite dev 会注入 ELECTRON_RENDERER_URL 和 NODE_ENV=development */
+function isDevRuntime() {
+  return process.env.NODE_ENV === 'development' || Boolean(process.env.ELECTRON_RENDERER_URL)
+}
+
 function resolveTrayIconPath() {
-  if (is.dev) {
+  if (isDevRuntime()) {
     return join(process.cwd(), 'build/icon.png')
   }
   // electron-builder extraResources → resources/icon.png

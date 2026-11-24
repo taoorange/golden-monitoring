@@ -69,12 +69,12 @@ const riseExample = computed(() => {
   )}… 逐档提醒`
 })
 
-const dropExample = computed(() => {
-  const step = safeNumber(settings.dropStepYuan, 3)
-  const high = 800
-  return `示例：近期高点 ${plain(high)} → ${plain(
-    Math.max(0, high - step)
-  )}、${plain(Math.max(0, high - step * 2))}… 提醒`
+const changeExample = computed(() => {
+  const step = safeNumber(settings.changeStepYuan, 1)
+  const base = 800
+  return `示例：上次提醒 ${plain(base)} → 涨到 ${plain(base + step)} 或跌到 ${plain(
+    base - step
+  )} 时提醒`
 })
 
 function plain(value) {
@@ -105,7 +105,7 @@ function clampNumber(key, min, max, fallback) {
 function normalizeAll() {
   clampNumber('nearGapYuan', 0.1, 1000, 5)
   clampNumber('riseStepYuan', 0.1, 1000, 1)
-  clampNumber('dropStepYuan', 0.1, 1000, 3)
+  clampNumber('changeStepYuan', 0.1, 1000, 1)
   clampNumber('pollIntervalSec', 5, 60, 10)
 }
 
@@ -317,21 +317,21 @@ onUnmounted(() => {
 
             <div class="setting-row">
               <div class="setting-text">
-                <label for="drop-step">下跌分档提醒</label>
+                <label for="change-step">价格变动提醒</label>
                 <p>
-                  以近期高点为锚，累计下跌每 X 元/克提醒一次；价格创新高后，锚点和档位重置。
+                  以上次提醒时的价格为基准，涨或跌累计满 X 元/克提醒一次，消息会标明上涨还是下跌；提醒后基准更新为当前价。
                 </p>
-                <small>{{ dropExample }}</small>
+                <small>{{ changeExample }}</small>
               </div>
               <div class="setting-control">
                 <div class="number-field">
                   <input
-                    id="drop-step"
-                    v-model.number="settings.dropStepYuan"
+                    id="change-step"
+                    v-model.number="settings.changeStepYuan"
                     type="number"
                     min="0.1"
                     step="0.1"
-                    @change="clampNumber('dropStepYuan', 0.1, 1000, 3)"
+                    @change="clampNumber('changeStepYuan', 0.1, 1000, 1)"
                   />
                   <span>元/克</span>
                 </div>
@@ -513,6 +513,7 @@ onUnmounted(() => {
               <div class="setting-control">
                 <select id="theme" v-model="settings.theme">
                   <optgroup label="浅色">
+                    <option value="battle-red">战地红</option>
                     <option value="pastel-dream">粉紫梦核</option>
                     <option value="mist-blue">晨雾蓝</option>
                     <option value="warm-sand">暖砂金</option>

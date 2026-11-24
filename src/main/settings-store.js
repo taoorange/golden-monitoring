@@ -6,9 +6,9 @@ export const SETTINGS_DEFAULTS = {
   notifyEnabled: true,
   nearGapYuan: 5,
   riseStepYuan: 1,
-  dropStepYuan: 3,
+  changeStepYuan: 1,
   pollIntervalSec: 10,
-  theme: 'pastel-dream',
+  theme: 'battle-red',
   showBgImage: true,
   feishuEnabled: false,
   feishuWebhook: '',
@@ -18,9 +18,8 @@ export const SETTINGS_DEFAULTS = {
 export const ALERT_STATE_DEFAULTS = {
   nearArmed: false,
   maxRiseTier: -1,
-  dropAnchorSell: null,
-  // 0 = 尚未触发过「满 1 步长」降价档；勿用 -1，否则会误报 0.00 元跌幅
-  maxDropTier: 0
+  // 上次提醒时的赎回价，用于「价格变动提醒」累计比较
+  changeBaseSell: null
 }
 
 async function readJson(path, fallback) {

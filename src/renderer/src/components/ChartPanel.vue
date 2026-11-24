@@ -18,6 +18,8 @@ const chartEl = ref(null)
 let chart = null
 let offRealtime = null
 let resizeObserver = null
+/** 首次实时推送后补拉一次完整曲线，避免窗口比主进程种子数据先就绪 */
+let snapshotSynced = false
 
 const RANGE_DAYS = { '1M': 31, '3M': 93, '1Y': 366 }
 const REALTIME_MAX = 1800
@@ -257,6 +259,12 @@ function onRealtimePayload(payload) {
   if (payload.point) applyRealtimePoint(payload.point)
   if (payload.ok === false) realtimeError.value = payload.error || '实时行情失败'
   else if (payload.ok) realtimeError.value = ''
+
+  // 主进程启动时先取种子再推第一笔；首笔到达时种子一定已就绪
+  if (!snapshotSynced) {
+    snapshotSynced = true
+    if (realtimePoints.value.length <= 1) void loadRealtime()
+  }
 }
 
 async function switchMode(next) {
@@ -422,11 +430,11 @@ watch(
     font-size: 12px;
 
     &.up {
-      color: var(--color-sell);
+      color: var(--color-up);
     }
 
     &.down {
-      color: var(--color-danger);
+      color: var(--color-down);
     }
   }
 }

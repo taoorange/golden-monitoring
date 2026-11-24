@@ -52,48 +52,46 @@ export function evaluateAlert({ sell, avg, nearGapYuan, riseStepYuan, state }) {
   return { shouldNotify: false, kind: null, message: '', nextState }
 }
 
-export function evaluateDropAlert({ sell, dropStepYuan, state }) {
-  const nextState = {
-    dropAnchorSell: state.dropAnchorSell,
-    maxDropTier: state.maxDropTier ?? -1
-  }
+/**
+ * 价格变动提醒：以上次提醒时的价格为基准，涨或跌累计满 changeStepYuan 元/克提醒一次。
+ * 提醒后基准更新为当前价，因此单边行情每满一个步长报一次，不会每个报价都响。
+ *
+ * @returns {{ notifications: Array<{ kind: 'rise' | 'drop', message: string }>, nextState: object }}
+ */
+export function evaluateChangeAlert({ sell, changeStepYuan, state }) {
+  const base = Number(state.changeBaseSell)
+  const nextState = { changeBaseSell: state.changeBaseSell ?? null }
 
   if (!Number.isFinite(sell)) {
     return { notifications: [], nextState }
   }
 
-  const step = Math.max(0.01, Number(dropStepYuan) || 3)
+  const step = Math.max(0.01, Number(changeStepYuan) || 1)
 
-  if (state.dropAnchorSell == null || !Number.isFinite(state.dropAnchorSell)) {
-    nextState.dropAnchorSell = sell
-    nextState.maxDropTier = 0
+  // 首次只记基准，不打扰
+  if (!Number.isFinite(base) || base <= 0) {
+    nextState.changeBaseSell = sell
     return { notifications: [], nextState }
   }
 
-  if (sell > state.dropAnchorSell) {
-    nextState.dropAnchorSell = sell
-    nextState.maxDropTier = 0
+  const diff = sell - base
+  if (Math.abs(diff) < step) {
     return { notifications: [], nextState }
   }
 
-  const anchor = state.dropAnchorSell
-  // tier=0 表示跌幅还不满一个步长（含 0），不应通知
-  const tier = Math.floor((anchor - sell) / step)
-  const notifications = []
-  let maxTier = state.maxDropTier ?? 0
-
-  // 从 1 档起报：至少下跌 dropStepYuan 元/克
-  for (let t = Math.max(maxTier + 1, 1); t <= tier; t++) {
-    const dropped = t * step
-    notifications.push({
-      kind: 'drop',
-      message: `赎回价 ${sell.toFixed(2)}，相对近期高点 ${anchor.toFixed(2)} 已累计下跌约 ${dropped.toFixed(2)} 元/克`
-    })
-    maxTier = t
+  const direction = diff > 0 ? '上涨' : '下跌'
+  nextState.changeBaseSell = sell
+  return {
+    notifications: [
+      {
+        kind: diff > 0 ? 'rise' : 'drop',
+        message: `赎回价 ${sell.toFixed(2)}，较上次提醒${direction} ${Math.abs(diff).toFixed(
+          2
+        )} 元/克`
+      }
+    ],
+    nextState
   }
-
-  nextState.maxDropTier = maxTier
-  return { notifications, nextState }
 }
 
 export function weightedAvgFromEntries(entries) {

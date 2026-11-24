@@ -7,7 +7,7 @@
 ```bash
 cd /Users/github/golden-monitoring
 npm install
-npm run dev
+npm run dev   # 5173 被占用时自动改用 5174、5175…
 ```
 
 ## 打包

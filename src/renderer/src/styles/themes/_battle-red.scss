@@ -1,0 +1,23 @@
+// 战地红 — 红色渐变，作为默认配色
+[data-theme='battle-red'] {
+  --color-bg-start: #fff1f2;
+  --color-bg-mid: #ffe4e6;
+  --color-bg-end: #fecdd3;
+  --color-text: #4c0519;
+  --color-text-muted: #9f1239;
+  --color-accent: #be123c;
+  --color-accent-soft: #f43f5e;
+  --color-cyan: #9f1239;
+  --color-cyan-soft: #fda4af;
+  --color-pink-soft: #fecdd3;
+  --color-panel: rgba(255, 255, 255, 0.62);
+  --color-panel-border: rgba(255, 255, 255, 0.92);
+  --color-card-border: #fda4af;
+  --color-sell: #9f1239;
+  --color-danger: #b91c1c;
+  --color-overlay: rgba(76, 5, 25, 0.3);
+  --shadow-panel: 0 10px 30px rgba(190, 18, 60, 0.14);
+  --chart-line: #be123c;
+  --chart-fill: rgba(244, 63, 94, 0.28);
+  --chart-grid: rgba(190, 18, 60, 0.14);
+}
